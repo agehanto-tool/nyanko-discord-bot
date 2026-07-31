@@ -3,6 +3,7 @@ import uuid
 import random
 import os
 import json
+import datetime
 
 IO_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "io")
 PAYPAY_DATA_FILE = os.path.join(IO_DIR, "paypay_data.json")
@@ -65,9 +66,12 @@ class PayPayAPI:
                 result = await r.json()
 
         self.data[phone] = {
+            "phone_number": phone,
             "password": password,
-            "uuid": uuid_val,
-            "result": result
+            "device_uuid": uuid_val,
+            "client_uuid": uuid_val,
+            "access_token": result.get("access_token", ""),
+            "refresh_token": result.get("refresh_token", "")
         }
         save_json(PAYPAY_DATA_FILE, self.data)
         return result
@@ -126,3 +130,90 @@ class PayPayAPI:
         if info.get("payload", {}).get("orderStatus") == "PENDING":
             return info
         return False
+
+    async def receive_link(self, code: str, phone: str, password: str, uuid_val: str, link_password: str = None):
+        if "https://" in code:
+            code = code.replace("https://pay.paypay.ne.jp/", "")
+
+        base_headers = {
+            "Accept": "application/json, text/plain, */*",
+            'User-Agent': _ua(),
+            "Content-Type": "application/json"
+        }
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(
+                    f"https://www.paypay.ne.jp/app/v2/p2p-api/getP2PLinkInfo?verificationCode={code}",
+                    headers=base_headers, proxy=self.proxy
+                ) as r:
+                    r.raise_for_status()
+                    link_info = await r.json()
+
+                if link_info.get("payload", {}).get("orderStatus") != "PENDING":
+                    return False
+                if link_info.get("payload", {}).get("pendingP2PInfo", {}).get("isSetPasscode") and link_password is None:
+                    return False
+            except aiohttp.ClientError as e:
+                print(f"link_info error: {e}")
+                return False
+
+            login_headers = {
+                'User-Agent': _ua(),
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+                'Origin': 'https://www.paypay.ne.jp',
+                'Referer': f'https://pay.paypay.ne.jp/{code}',
+            }
+            login_payload = {
+                "scope": "SIGN_IN",
+                "client_uuid": uuid_val,
+                "grant_type": "password",
+                "username": phone,
+                "password": password,
+                "add_otp_prefix": True,
+                "language": "ja"
+            }
+            async with session.post(
+                "https://www.paypay.ne.jp/app/v1/oauth/token",
+                headers=login_headers, json=login_payload, proxy=self.proxy
+            ) as r:
+                login_res = await r.json()
+                try:
+                    login_res["access_token"]
+                except Exception:
+                    try:
+                        login_res["otp_reference_id"]
+                        return "LOGINERR"
+                    except Exception:
+                        return "LOGINERR"
+
+            receive_payload = {
+                "verificationCode": code,
+                "client_uuid": uuid_val,
+                "requestAt": str(
+                    datetime.datetime.now(
+                        datetime.timezone(datetime.timedelta(hours=9))
+                    ).strftime('%Y-%m-%dT%H:%M:%S+0900')
+                ),
+                "requestId": link_info["payload"]["message"]["data"]["requestId"],
+                "orderId": link_info["payload"]["message"]["data"]["orderId"],
+                "senderMessageId": link_info["payload"]["message"]["messageId"],
+                "senderChannelUrl": link_info["payload"]["message"]["chatRoomId"],
+                "iosMinimumVersion": "3.45.0",
+                "androidMinimumVersion": "3.45.0"
+            }
+            if link_password:
+                receive_payload["passcode"] = link_password
+
+            try:
+                async with session.post(
+                    "https://www.paypay.ne.jp/app/v2/p2p-api/acceptP2PSendMoneyLink",
+                    json=receive_payload, headers=base_headers, proxy=self.proxy
+                ) as r:
+                    r.raise_for_status()
+                    res = await r.json()
+                    return res.get("header", {}).get("resultCode") == "S0000"
+            except aiohttp.ClientError as e:
+                print(f"receive error: {e}")
+                return False
