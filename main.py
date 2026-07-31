@@ -575,7 +575,7 @@ class CouponModal(discord.ui.Modal):
         self.parent = parent
         self.code = TextInput(
             label="クーポンコード",
-            placeholder="100桁のコードを入力",
+            placeholder="コードを入力",
             required=True,
             max_length=100
         )
@@ -593,7 +593,7 @@ class CouponModal(discord.ui.Modal):
                 self.parent.coupon_discount = coupon.get("discount", 0)
                 embed = success_embed(
                     "🎫 クーポン適用",
-                    f"{coupon['discount']}円割引されました！\n**実質無料で実行できます！**"
+                    f"{coupon['discount']}円割引されました！\n"
                 )
                 await interaction.response.edit_message(embed=embed, view=self.parent)
                 return
