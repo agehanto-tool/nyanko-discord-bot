@@ -137,7 +137,7 @@ pip install -r requirements.txt
 }
 ```
 
-###　手順4: BOTを起動
+### 手順4: BOTを起動
 ```bash
 python main.py
 ```
