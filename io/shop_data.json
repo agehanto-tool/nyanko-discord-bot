@@ -1,0 +1,13 @@
+{
+  "coupons": {
+    "B9mIdMcB4XnX3TJXgdtSjyB3rukf5NB0u0xFebYaKVAQJJJL8ImMsp8zNHA6a1ppjVt9yRBZXyIhPfIrwdv4T4QjRtWlF7w1VJlP": {
+      "code": "B9mIdMcB4XnX3TJXgdtSjyB3rukf5NB0u0xFebYaKVAQJJJL8ImMsp8zNHA6a1ppjVt9yRBZXyIhPfIrwdv4T4QjRtWlF7w1VJlP",
+      "discount": 100,
+      "usage_type": "unlimited",
+      "max_uses": 999999,
+      "used_count": 0,
+      "created_by": 1512652537407340674,
+      "created_at": "2026-07-31T16:55:04.269788"
+    }
+  }
+}

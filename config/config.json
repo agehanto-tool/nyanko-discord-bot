@@ -1,0 +1,19 @@
+{
+    "discord_token": "bot token here",
+    "prefix": "/",
+    "prices": {
+        "default": 500,
+        "account_clone": 1000,
+        "nyanko_daiko": 300
+    },
+    "bcsfe": {
+        "enabled": true,
+        "timeout": 60
+    },
+    "paypay": {
+        "enabled": true
+    },
+    "kyash": {
+        "enabled": true
+    }
+}
