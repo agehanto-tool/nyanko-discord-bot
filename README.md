@@ -193,4 +193,4 @@ discord.py - Discord APIラッパー
 バグ報告: https://discord.com/users/1512652537407340674
 
 
-<p align="center"> Made with ❤️ by <strong>dev 3h62</strong> </p>
+<p align="center"> Made with ❤️ by <strong>dev 3h62</strong>
