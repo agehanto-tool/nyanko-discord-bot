@@ -144,29 +144,41 @@ python main.py
 # 📁 プロジェクト構成
 ```bash
 nyanko-discord-bot/
-├── main.py                 # メインエントリーポイント
-├── utils.py                # ユーティリティ関数
-├── requirements.txt        # Python依存パッケージ
-├── icon.svg                # ボットアイコン
-├── README.md               # このファイル
-├── api/
+│
+├── main.py                         # メインエントリーポイント
+├── utils.py                        # ユーティリティ関数
+├── requirements.txt                # Python依存パッケージ
+│
+├── README.md                       # プロジェクト説明
+├── SECURITY.md                     # セキュリティポリシー
+├── PRIVACY.md                      # プライバシーポリシー
+├── LICENSE                         # GPLv3ライセンス
+├── icon.svg                        # ボットアイコン
+│
+├── api/                            # API関連
 │   ├── __init__.py
-│   ├── paypay.py          # PayPay APIラッパー
-│   ├── kyash.py           # Kyash APIラッパー
+│   ├── paypay.py                   # PayPay APIラッパー
+│   ├── kyash.py                    # Kyash APIラッパー
 │   └── server/
 │       ├── __init__.py
-│       └── bcsfe.py       # BCSFE連携
-├── io/
+│       └── bcsfe.py                # BCSFE連携（全機能）
+│
+├── io/                             # 入出力データ
 │   ├── __init__.py
-│   ├── paypay_data.json
-│   ├── kyash_data.json
-│   ├── user_data.json
-│   ├── shop_data.json
-│   ├── price_overrides.json
-│   └── order_log.json
-└── config/
+│   ├── input/                      # コマンド処理用（データ保存）
+│   │   ├── __init__.py
+│   │   ├── paypay_data.json        # PayPayアカウント情報
+│   │   ├── kyash_data.json         # Kyashアカウント情報
+│   │   ├── user_data.json          # ユーザーデータ
+│   │   ├── shop_data.json          # ショップ/サーバー設定
+│   │   ├── price_overrides.json    # 価格オーバーライド
+│   │   └── order_log.json          # 注文履歴
+│   └── uninput/                    # 将来的な拡張用
+│       └── __init__.py
+│
+└── config/                         # 設定ファイル
     ├── __init__.py
-    └── config.json
+    └── config.json                 # Bot設定（トークンなど）
 ```
 ### 🔒 ライセンス
 このプロジェクトは GNU General Public License v3.0 の下でライセンスされています。詳細は LICENSE ファイルを参照してください。
