@@ -24,11 +24,11 @@ paypay = PayPayAPI()
 kyash = KyashAPI()
 bcsfe = BCSFEAPI()
 
-user_data = load_json("io/user_data.json")
-shop_data = load_json("io/shop_data.json")
+user_data = load_json("io/input/user_data.json")
+shop_data = load_json("io/input/shop_data.json")
 
 def load_guild_config(guild_id):
-    data = load_json("io/shop_data.json", {})
+    data = load_json("io/input/shop_data.json", {})
     if "guild_config" not in data:
         data["guild_config"] = {}
     if str(guild_id) not in data["guild_config"]:
@@ -37,15 +37,15 @@ def load_guild_config(guild_id):
             "achievement_channel": None,
             "prices": {}
         }
-        save_json("io/shop_data.json", data)
+        save_json("io/input/shop_data.json", data)
     return data["guild_config"][str(guild_id)]
 
 def save_guild_config(guild_id, config):
-    data = load_json("io/shop_data.json", {})
+    data = load_json("io/input/shop_data.json", {})
     if "guild_config" not in data:
         data["guild_config"] = {}
     data["guild_config"][str(guild_id)] = config
-    save_json("io/shop_data.json", data)
+    save_json("io/input/shop_data.json", data)
 
 @bot.event
 async def on_ready():
@@ -173,7 +173,7 @@ async def create_coupon(
         return
 
     code = generate_coupon_code()
-    data = load_json("io/shop_data.json")
+    data = load_json("io/input/shop_data.json")
     if "coupons" not in data:
         data["coupons"] = {}
 
@@ -193,7 +193,7 @@ async def create_coupon(
         "created_by": interaction.user.id,
         "created_at": datetime.datetime.now().isoformat()
     }
-    save_json("io/shop_data.json", data)
+    save_json("io/input/shop_data.json", data)
 
     usage_labels = {
         "unlimited": "🔄 無制限",
@@ -210,7 +210,7 @@ async def create_coupon(
 @tree.command(name="クーポン一覧", description="すべてのクーポンを表示します")
 @app_commands.checks.has_permissions(administrator=True)
 async def list_coupons(interaction: discord.Interaction):
-    data = load_json("io/shop_data.json")
+    data = load_json("io/input/shop_data.json")
     coupons = data.get("coupons", {})
     if not coupons:
         embed = info_embed("📋 クーポン一覧", "現在有効なクーポンはありません。")
@@ -231,12 +231,12 @@ async def list_coupons(interaction: discord.Interaction):
 @tree.command(name="クーポン削除", description="クーポンを削除します")
 @app_commands.checks.has_permissions(administrator=True)
 async def delete_coupon(interaction: discord.Interaction, code: str):
-    data = load_json("io/shop_data.json")
+    data = load_json("io/input/shop_data.json")
     coupons = data.get("coupons", {})
     if code in coupons:
         del coupons[code]
         data["coupons"] = coupons
-        save_json("io/shop_data.json", data)
+        save_json("io/input/shop_data.json", data)
         embed = success_embed("✅ クーポン削除完了", f"コード: `{code}`")
         await interaction.response.send_message(embed=embed, ephemeral=True)
     else:
@@ -582,18 +582,18 @@ class CouponModal(discord.ui.Modal):
         self.add_item(self.code)
 
     async def on_submit(self, interaction: discord.Interaction):
-        coupon_data = load_json("io/shop_data.json")
+        coupon_data = load_json("io/input/shop_data.json")
         coupons = coupon_data.get("coupons", {})
         if self.code.value in coupons:
             coupon = coupons[self.code.value]
             if coupon.get("used_count", 0) < coupon.get("max_uses", 1):
                 coupon["used_count"] = coupon.get("used_count", 0) + 1
                 coupon_data["coupons"] = coupons
-                save_json("io/shop_data.json", coupon_data)
+                save_json("io/input/shop_data.json", coupon_data)
                 self.parent.coupon_discount = coupon.get("discount", 0)
                 embed = success_embed(
                     "🎫 クーポン適用",
-                    f"{coupon['discount']}円割引されました！\n"
+                    f"{coupon['discount']}円割引されました！"
                 )
                 await interaction.response.edit_message(embed=embed, view=self.parent)
                 return
