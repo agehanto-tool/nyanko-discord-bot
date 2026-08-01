@@ -4,6 +4,8 @@ import discord
 import json
 import os
 
+from io.input import PAYPAY_DATA, KYASH_DATA, USER_DATA, SHOP_DATA, PRICE_OVERRIDES, ORDER_LOG
+
 def random_color():
     return discord.Color.from_rgb(
         random.randint(0, 255),
@@ -50,5 +52,6 @@ def load_json(filepath):
     return {}
 
 def save_json(filepath, data):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
