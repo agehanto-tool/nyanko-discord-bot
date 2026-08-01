@@ -4,6 +4,8 @@ import os
 import uuid
 import datetime
 
+from io.input import PRICE_OVERRIDES, ORDER_LOG
+
 try:
     from bcsfe import BattleCatsSaveEditor
     from bcsfe.files.save import SaveFile
@@ -11,9 +13,6 @@ try:
     BCSFE_AVAILABLE = True
 except ImportError:
     BCSFE_AVAILABLE = False
-
-PRICE_FILE = "io/price_overrides.json"
-ORDER_LOG_FILE = "io/order_log.json"
 
 ITEM_CONFIG = {
     "catfood_50000": {"label": "猫缶 50,000個", "price": 0, "cat": "resource"},
@@ -77,11 +76,12 @@ def load_json(path, default=None):
     return default
 
 def save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 def get_price(item_key, guild_id=None):
-    overrides = load_json(PRICE_FILE, {})
+    overrides = load_json(PRICE_OVERRIDES, {})
     if guild_id and str(guild_id) in overrides:
         if item_key in overrides[str(guild_id)]:
             return overrides[str(guild_id)][item_key]
@@ -89,19 +89,19 @@ def get_price(item_key, guild_id=None):
 
 def set_price(item_key, price, guild_id):
     try:
-        overrides = load_json(PRICE_FILE, {})
+        overrides = load_json(PRICE_OVERRIDES, {})
         gid = str(guild_id)
         if gid not in overrides:
             overrides[gid] = {}
         overrides[gid][item_key] = price
-        save_json(PRICE_FILE, overrides)
+        save_json(PRICE_OVERRIDES, overrides)
         return True
     except Exception as e:
         print(f"set_price error: {e}")
         return False
 
 def log_order(user_id, items, service_type="normal"):
-    orders = load_json(ORDER_LOG_FILE, [])
+    orders = load_json(ORDER_LOG, [])
     orders.append({
         "id": str(uuid.uuid4()),
         "user_id": user_id,
@@ -109,7 +109,7 @@ def log_order(user_id, items, service_type="normal"):
         "type": service_type,
         "time": datetime.datetime.now().isoformat()
     })
-    save_json(ORDER_LOG_FILE, orders)
+    save_json(ORDER_LOG, orders)
 
 class BCSFEAPI:
     def __init__(self):
