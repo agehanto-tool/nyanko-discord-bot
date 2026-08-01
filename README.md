@@ -22,7 +22,6 @@
   <img src="https://img.shields.io/badge/License-GPLv3-red?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/github-bcsfe-blue?style=for-the-badge&logo=github" alt="BCSFE">
-　<img src="https://img.shields.io/badge/Downloads-0-brightgreen?style=for-the-badge" alt="Downloads">
 　<img src="https://img.shields.io/badge/Discord-Support-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
 </p>
 
