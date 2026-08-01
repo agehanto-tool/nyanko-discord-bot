@@ -5,8 +5,7 @@ import os
 import json
 import datetime
 
-IO_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "io")
-PAYPAY_DATA_FILE = os.path.join(IO_DIR, "paypay_data.json")
+from io.input import PAYPAY_DATA
 
 _UA_LIST = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
@@ -28,6 +27,7 @@ def load_json(path, default=None):
     return default
 
 def save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -35,7 +35,7 @@ class PayPayAPI:
     def __init__(self, proxy=None):
         self.proxy = proxy
         self.session = None
-        self.data = load_json(PAYPAY_DATA_FILE)
+        self.data = load_json(PAYPAY_DATA)
 
     async def login(self, phone: str, password: str, uuid_val: str = None):
         if uuid_val is None:
@@ -73,7 +73,7 @@ class PayPayAPI:
             "access_token": result.get("access_token", ""),
             "refresh_token": result.get("refresh_token", "")
         }
-        save_json(PAYPAY_DATA_FILE, self.data)
+        save_json(PAYPAY_DATA, self.data)
         return result
 
     async def login_otp(self, uuid_val: str, otp: str, otp_id: str, otp_pre: str):
