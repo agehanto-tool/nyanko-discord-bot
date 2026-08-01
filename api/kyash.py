@@ -1,8 +1,7 @@
 import os
 import json
 
-IO_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "io")
-KYASH_DATA_FILE = os.path.join(IO_DIR, "kyash_data.json")
+from io.input import KYASH_DATA
 
 try:
     from Kyasher import Kyash
@@ -22,12 +21,13 @@ def load_json(path, default=None):
     return default
 
 def save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 class KyashAPI:
     def __init__(self):
-        self.data = load_json(KYASH_DATA_FILE)
+        self.data = load_json(KYASH_DATA)
         self.instance = None
 
     def login(self, email: str, password: str, client_uuid: str = None, installation_uuid: str = None):
@@ -41,7 +41,7 @@ class KyashAPI:
             "client_uuid": client_uuid,
             "installation_uuid": installation_uuid
         }
-        save_json(KYASH_DATA_FILE, self.data)
+        save_json(KYASH_DATA, self.data)
         return self.instance
 
     def login_otp(self, otp: str):
