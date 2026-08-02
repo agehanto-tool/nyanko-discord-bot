@@ -15,7 +15,7 @@
   <a href="#-設定方法">設定</a> •
   <a href="#-ライセンス">ライセンス</a>
 </p>
-あ
+
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.9+-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Discord.py-2.3.0+-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.py">
