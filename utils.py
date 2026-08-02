@@ -3,7 +3,7 @@ import string
 import discord
 import json
 import os
-
+あ
 from io.input import PAYPAY_DATA, KYASH_DATA, USER_DATA, SHOP_DATA, PRICE_OVERRIDES, ORDER_LOG
 
 def random_color():
