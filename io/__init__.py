@@ -2,8 +2,8 @@ import os
 
 IO_DIR = os.path.dirname(__file__)
 
-INPUT_DIR = os.path.join(IO_DIR, "input")
-UNINPUT_DIR = os.path.join(IO_DIR, "uninput")
+INPUT_DIR = os.path.join(IO_DIR, "input")　// input
+UNINPUT_DIR = os.path.join(IO_DIR, "uninput") // uninput
 
 PAYPAY_DATA = os.path.join(INPUT_DIR, "paypay_data.json")
 KYASH_DATA = os.path.join(INPUT_DIR, "kyash_data.json")
