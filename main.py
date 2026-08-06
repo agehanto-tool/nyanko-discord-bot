@@ -249,6 +249,125 @@ async def paypay_login(interaction: discord.Interaction):
     embed = info_embed("📱 PayPayログイン", "以下のボタンをクリックしてログイン情報を入力してください。")
     await interaction.response.send_message(embed=embed, view=modal, ephemeral=True)
 
+class PayPayLoginModal(View):
+    def __init__(self):
+        super().__init__(timeout=300)
+
+    @discord.ui.button(label="📱 PayPayログイン", style=discord.ButtonStyle.primary, custom_id="paypay_login_btn")
+    async def login_btn(self, interaction: discord.Interaction, button: Button):
+        modal = PayPayLoginModalInput()
+        await interaction.response.send_modal(modal)
+
+class PayPayLoginModalInput(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="PayPayログイン")
+        self.phone = TextInput(label="電話番号", placeholder="08012345678", required=True, max_length=11)
+        self.password = TextInput(label="パスワード", placeholder="パスワードを入力", required=True, max_length=50)
+        self.add_item(self.phone)
+        self.add_item(self.password)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        phone = self.phone.value
+        password = self.password.value
+        uuid_val = str(uuid.uuid4())
+
+        try:
+            result = await paypay.login(phone, password, uuid_val)
+
+            if "access_token" in result:
+                embed = success_embed("✅ PayPayログイン成功", f"**電話番号**: {phone}")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif "otp_reference_id" in result:
+                otp_id = result.get("otp_reference_id")
+                otp_pre = result.get("otp_prefix")
+
+                bot_data = load_json("io/input/paypay_data.json")
+                if "otp_sessions" not in bot_data:
+                    bot_data["otp_sessions"] = {}
+                bot_data["otp_sessions"][str(interaction.user.id)] = {
+                    "uuid": uuid_val,
+                    "otp_id": otp_id,
+                    "otp_pre": otp_pre,
+                    "phone": phone
+                }
+                save_json("io/input/paypay_data.json", bot_data)
+
+                embed = info_embed(
+                    "🔐 OTP認証が必要です",
+                    f"**{phone}** にSMSが送信されました。\n下のボタンからOTPコードを入力してください。"
+                )
+                view = PayPayOTPModal()
+                await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+            else:
+                embed = error_embed("❌ ログイン失敗", f"```json\n{json.dumps(result, ensure_ascii=False, indent=2)[:1000]}\n```")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            embed = error_embed("❌ エラー", f"```\n{str(e)}\n```")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+class PayPayOTPModal(View):
+    def __init__(self):
+        super().__init__(timeout=300)
+
+    @discord.ui.button(label="🔐 OTPコードを入力", style=discord.ButtonStyle.primary, custom_id="paypay_otp_btn")
+    async def otp_btn(self, interaction: discord.Interaction, button: Button):
+        modal = PayPayOTPInput()
+        await interaction.response.send_modal(modal)
+
+class PayPayOTPInput(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="PayPay OTP認証")
+        self.otp = TextInput(
+            label="OTPコード（SMSに届いた6桁の数字）",
+            placeholder="123456",
+            required=True,
+            max_length=6,
+            min_length=6
+        )
+        self.add_item(self.otp)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        bot_data = load_json("io/input/paypay_data.json")
+        session = bot_data.get("otp_sessions", {}).get(str(interaction.user.id))
+
+        if not session:
+            embed = error_embed("❌ エラー", "OTPセッションが見つかりません。もう一度 `/paypay_login` を実行してください。")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        try:
+            result = await paypay.login_otp(
+                session["uuid"],
+                self.otp.value,
+                session["otp_id"],
+                session["otp_pre"]
+            )
+
+            if result == "OK":
+                embed = success_embed(
+                    "✅ OTP認証成功",
+                    f"PayPayにログインしました。\n電話番号: {session['phone']}"
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+                if "otp_sessions" in bot_data:
+                    del bot_data["otp_sessions"][str(interaction.user.id)]
+                    save_json("io/input/paypay_data.json", bot_data)
+
+            else:
+                embed = error_embed("❌ OTP認証失敗", "コードが正しくありません。もう一度試してください。")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            embed = error_embed("❌ エラー", f"```\n{str(e)}\n```")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
 @tree.command(name="paypay_logout", description="PayPayアカウントからログアウトします")
 async def paypay_logout(interaction: discord.Interaction):
     embed = success_embed("✅ ログアウト完了", "PayPayアカウントからログアウトしました。")
@@ -264,6 +383,28 @@ async def kyash_login(interaction: discord.Interaction):
     modal = KyashLoginModal()
     embed = info_embed("📱 Kyashログイン", "以下のボタンをクリックしてログイン情報を入力してください。")
     await interaction.response.send_message(embed=embed, view=modal, ephemeral=True)
+
+class KyashLoginModal(View):
+    def __init__(self):
+        super().__init__(timeout=300)
+
+    @discord.ui.button(label="📱 Kyashログイン", style=discord.ButtonStyle.primary, custom_id="kyash_login_btn")
+    async def login_btn(self, interaction: discord.Interaction, button: Button):
+        modal = KyashLoginModalInput()
+        await interaction.response.send_modal(modal)
+
+class KyashLoginModalInput(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="Kyashログイン")
+        self.email = TextInput(label="メールアドレス", placeholder="dxiybfx0@agehantolove.cfd", required=True, max_length=100)
+        self.password = TextInput(label="パスワード", placeholder="パスワードを入力", required=True, max_length=50)
+        self.add_item(self.email)
+        self.add_item(self.password)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        embed = success_embed("✅ Kyashログイン成功", f"**メールアドレス**: {self.email.value}")
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 @tree.command(name="kyash_logout", description="Kyashアカウントからログアウトします")
 async def kyash_logout(interaction: discord.Interaction):
@@ -510,23 +651,51 @@ class PaymentSelect(View):
             f"引継ぎコード: `{self.transfer_code}`\nPIN: `{self.pin}`\nサービス: {len(self.services)}件"
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
-        result = bcsfe.apply_edits(self.services)
-        if result.get("success"):
-            success_count = sum(1 for v in result.get("results", {}).values() if v)
-            total_count = len(result.get("results", {}))
-            new_transfer = generate_transfer_code()
-            new_pin = generate_pin()
+
+        try:
+            download_result = await bcsfe.download_save(self.transfer_code, self.pin)
+            if not download_result.get("success"):
+                embed = error_embed("❌ セーブデータ取得失敗", download_result.get("error", "不明なエラー"))
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            edit_result = bcsfe.apply_edits(self.services)
+            if not edit_result.get("success"):
+                embed = error_embed("❌ 編集失敗", edit_result.get("error", "不明なエラー"))
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            upload_result = await bcsfe.upload_save()
+            if not upload_result.get("success"):
+                embed = error_embed("❌ アップロード失敗", upload_result.get("error", "不明なエラー"))
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            new_transfer = upload_result.get("transfer_code")
+            new_pin = upload_result.get("pin")
+
+            if not new_transfer or not new_pin:
+                embed = error_embed("❌ エラー", "新しい引継ぎコードの取得に失敗しました。")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            success_count = sum(1 for v in edit_result.get("results", {}).values() if v)
+            total_count = len(edit_result.get("results", {}))
+
             embed = success_embed(
                 "✅ 代行完了！",
                 f"**{success_count}/{total_count}** 件の編集が成功しました。"
             )
             embed.add_field(name="🔑 新しい引継ぎコード", value=f"`{new_transfer}`", inline=False)
             embed.add_field(name="🔐 新しいPIN", value=f"`{new_pin}`", inline=False)
+
             try:
                 await interaction.user.send(embed=embed)
             except:
                 pass
+
             await interaction.followup.send(embed=embed, ephemeral=True)
+
             guild_config = load_guild_config(interaction.guild_id)
             if guild_config.get("purchase_role"):
                 role = interaction.guild.get_role(guild_config["purchase_role"])
@@ -535,6 +704,7 @@ class PaymentSelect(View):
                         await interaction.user.add_roles(role)
                     except:
                         pass
+
             if guild_config.get("achievement_channel"):
                 channel = interaction.guild.get_channel(guild_config["achievement_channel"])
                 if channel:
@@ -561,12 +731,11 @@ class PaymentSelect(View):
                     )
                     achievement_embed.set_footer(text="dev 3h62")
                     await channel.send(embed=achievement_embed)
+
             log_order(interaction.user.id, self.services, "normal")
-        else:
-            embed = error_embed(
-                "❌ 代行失敗",
-                result.get("error", "不明なエラーが発生しました。")
-            )
+
+        except Exception as e:
+            embed = error_embed("❌ 代行失敗", f"```\n{str(e)}\n```")
             await interaction.followup.send(embed=embed, ephemeral=True)
 
 class CouponModal(discord.ui.Modal):
@@ -575,7 +744,7 @@ class CouponModal(discord.ui.Modal):
         self.parent = parent
         self.code = TextInput(
             label="クーポンコード",
-            placeholder="コードを入力",
+            placeholder="100桁のコードを入力",
             required=True,
             max_length=100
         )
@@ -593,7 +762,7 @@ class CouponModal(discord.ui.Modal):
                 self.parent.coupon_discount = coupon.get("discount", 0)
                 embed = success_embed(
                     "🎫 クーポン適用",
-                    f"{coupon['discount']}円割引されました！"
+                    f"{coupon['discount']}円割引されました！\n"
                 )
                 await interaction.response.edit_message(embed=embed, view=self.parent)
                 return
@@ -676,88 +845,49 @@ class CloneConfirm(View):
         )
         await interaction.response.edit_message(embed=embed, view=None)
 
-        new_transfer = generate_transfer_code()
-        new_pin = generate_pin()
-
-        embed = success_embed(
-            "✅ アカウント複製完了！",
-            "新しいアカウントが作成されました。"
-        )
-        embed.add_field(name="🔑 新しい引継ぎコード", value=f"`{new_transfer}`", inline=False)
-        embed.add_field(name="🔐 新しいPIN", value=f"`{new_pin}`", inline=False)
-        embed.add_field(
-            name="📌 注意",
-            value="このコードはあなただけに送信されています。\n必ずメモしてください。",
-            inline=False
-        )
-
         try:
-            await interaction.user.send(embed=embed)
-        except:
-            pass
-
-        await interaction.followup.send(embed=embed, ephemeral=True)
-
-class PayPayLoginModal(View):
-    def __init__(self):
-        super().__init__(timeout=300)
-
-    @discord.ui.button(label="📱 PayPayログイン", style=discord.ButtonStyle.primary, custom_id="paypay_login_btn")
-    async def login_btn(self, interaction: discord.Interaction, button: Button):
-        modal = PayPayLoginModalInput()
-        await interaction.response.send_modal(modal)
-
-class PayPayLoginModalInput(discord.ui.Modal):
-    def __init__(self):
-        super().__init__(title="PayPayログイン")
-        self.phone = TextInput(label="電話番号", placeholder="08012345678", required=True, max_length=11)
-        self.password = TextInput(label="パスワード", placeholder="パスワードを入力", required=True, max_length=50)
-        self.uuid = TextInput(label="UUID (任意)", placeholder="空欄で自動生成", required=False, max_length=36)
-        self.add_item(self.phone)
-        self.add_item(self.password)
-        self.add_item(self.uuid)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        phone = self.phone.value
-        password = self.password.value
-        uuid_val = self.uuid.value or str(uuid.uuid4())
-        try:
-            result = await paypay.login(phone, password, uuid_val)
-            if "access_token" in result:
-                embed = success_embed("✅ PayPayログイン成功", f"**電話番号**: {phone}\n**UUID**: {uuid_val}")
+            download_result = await bcsfe.download_save(self.transfer_code, self.pin)
+            if not download_result.get("success"):
+                embed = error_embed("❌ セーブデータ取得失敗", download_result.get("error", "不明なエラー"))
                 await interaction.followup.send(embed=embed, ephemeral=True)
-            elif "otp_reference_id" in result:
-                embed = info_embed("🔐 OTP認証が必要です", f"**{phone}** にSMSが送信されました。\n`/paypay_otp <コード>` を入力してください。")
+                return
+
+            upload_result = await bcsfe.upload_save()
+            if not upload_result.get("success"):
+                embed = error_embed("❌ アップロード失敗", upload_result.get("error", "不明なエラー"))
                 await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                embed = error_embed("❌ ログイン失敗", f"```json\n{json.dumps(result, ensure_ascii=False, indent=2)[:1000]}\n```")
+                return
+
+            new_transfer = upload_result.get("transfer_code")
+            new_pin = upload_result.get("pin")
+
+            if not new_transfer or not new_pin:
+                embed = error_embed("❌ エラー", "新しい引継ぎコードの取得に失敗しました。")
                 await interaction.followup.send(embed=embed, ephemeral=True)
-        except Exception as e:
-            embed = error_embed("❌ エラー", f"```\n{str(e)}\n```")
+                return
+
+            embed = success_embed(
+                "✅ アカウント複製完了！",
+                "新しいアカウントが作成されました。"
+            )
+            embed.add_field(name="🔑 新しい引継ぎコード", value=f"`{new_transfer}`", inline=False)
+            embed.add_field(name="🔐 新しいPIN", value=f"`{new_pin}`", inline=False)
+            embed.add_field(
+                name="📌 注意",
+                value="このコードはあなただけに送信されています。\n必ずメモしてください。",
+                inline=False
+            )
+
+            try:
+                await interaction.user.send(embed=embed)
+            except:
+                pass
+
             await interaction.followup.send(embed=embed, ephemeral=True)
 
-class KyashLoginModal(View):
-    def __init__(self):
-        super().__init__(timeout=300)
-
-    @discord.ui.button(label="📱 Kyashログイン", style=discord.ButtonStyle.primary, custom_id="kyash_login_btn")
-    async def login_btn(self, interaction: discord.Interaction, button: Button):
-        modal = KyashLoginModalInput()
-        await interaction.response.send_modal(modal)
-
-class KyashLoginModalInput(discord.ui.Modal):
-    def __init__(self):
-        super().__init__(title="Kyashログイン")
-        self.email = TextInput(label="メールアドレス", placeholder="example@email.com", required=True, max_length=100)
-        self.password = TextInput(label="パスワード", placeholder="パスワードを入力", required=True, max_length=50)
-        self.add_item(self.email)
-        self.add_item(self.password)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        embed = success_embed("✅ Kyashログイン成功", f"**メールアドレス**: {self.email.value}")
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        except Exception as e:
+            embed = error_embed("❌ 複製失敗", f"```\n{str(e)}\n```")
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
 if __name__ == "__main__":
     if TOKEN:
